@@ -7,23 +7,30 @@
 #include <iostream>
 
 #define iceil(num, den) (num + den - 1) / den
-#define ARRAY_SIZE 20 //must be an even number; this number/2 = number of points
-#define BIN 100 //divides the grid into square bins to vote on. perfect square value
-#define NUM_LINES 8 //top X voted lines
-#define LXBOUND -5
-#define RXBOUND 5
-#define LYBOUND -5
-#define UYBOUND 5
-#define INCREMENT 1.0
+#define ARRAY_SIZE 20 //must be an even number; this number/2 = number of points //sets random array and constant mem size
+//#define BIN 100 //divides the grid into square bins to vote on. perfect square value
+#define NUM_LINES 1 //top X voted lines. Picks first X Largest from top left to bottom right of grid space.
+
+/*GRID evaluated for bin voting
+ * Must always be a square grid with origin at center
+ */
+#define LXBOUND -5 //lowest X
+#define RXBOUND 5 //highest X
+#define LYBOUND -5 //lowest Y
+#define UYBOUND 5 //highest Y
+////////////////////////////////
+
+#define INCREMENT 0.25 //precision, length of 1 side of the square(bin)
+//The (abs)difference between between two sides is the length of the grid. Length/Increment determines how many bins 
 
 __constant__ int d_coordarray[ARRAY_SIZE];//Place coordinates in constant memory
 
 using namespace std;
 
-//show grid with votes
+//show grid with votes. Becomes unuseful when bins > 20x20
 void printVotes(int *h_binarray) {
 	//int size = (RXBOUND - LXBOUND)*(RXBOUND - LXBOUND);//array index size
-	int col = ((RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)) / (RXBOUND + UYBOUND);//number of columns
+	int col = (((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) / ((RXBOUND + UYBOUND)/INCREMENT);//number of columns/////////////////
 	for (int i = 0; i < col; i++) {
 		for (int j = 0; j < col*col; j += col) {
 			cout << h_binarray[i + j] << "    ";
@@ -33,9 +40,9 @@ void printVotes(int *h_binarray) {
 
 }
 float slopeCalculator(int index) {//convert from array index to representative slope
-	int col = (((RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)) / (RXBOUND + UYBOUND));
+	int col = ((((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) / ((RXBOUND + UYBOUND)/INCREMENT));
 	int change = col;
-	int center = (RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)/2;
+	int center = ((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)/2;
 	int displacement = 0;
 	float returnval;
 	int  flag = 0;
@@ -52,7 +59,7 @@ float slopeCalculator(int index) {//convert from array index to representative s
 }
 
 float interceptCalculator(int index) {//convert from array index to representative intercept
-	int col = (((RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)) / (RXBOUND + UYBOUND));
+	int col = ((((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) / ((RXBOUND + UYBOUND)/INCREMENT));
 	int displacement = 0;
 	int check= index%col;
 	int center1 = col / 2;
@@ -72,7 +79,7 @@ float interceptCalculator(int index) {//convert from array index to representati
 
 //find n highest indexes in the array
 void highest_index(int *h_binarray) {
-	int size = (RXBOUND - LXBOUND)*(RXBOUND - LXBOUND);
+	int size = ((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT);
 	int *index=new int[size];
 	for (int i = 0; i < size; i++) { index[i] = i; }//array representing indices
 	int stop = 1;// 1 starts, then 0, end on 1
@@ -95,8 +102,15 @@ void highest_index(int *h_binarray) {
 			}
 		}
 	}
+
+	/* Troubleshooting 
+	for (int k = 0; k < 3; k++) {
+		cout << k << " highest index =" << index[k] << "with value =" << h_binarray[k] << endl;
+	}
+	*/
+
 	//use highest values for slope & intercept
-	int col = (((RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)) / (RXBOUND + UYBOUND));
+	int col = (((RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)) / ((RXBOUND + UYBOUND)*INCREMENT));//////////////////////////////
 	float totalslope=0.0, totalintercept=0.0;
 	for (int i = 0; i < NUM_LINES; i++) {
 		float slope = slopeCalculator(index[i]);
@@ -162,9 +176,9 @@ __global__ void kernelHough(int size, int* d_binarray) {
 //prep function
 void houghTransform(int* h_input_array, int size) {
 	int *d_binarray;
-	int *h_binarray = new int[(RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)];
+	int *h_binarray = new int[((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)];
 	int coordarraysize = size * sizeof(int);
-	int binarraysize = (RXBOUND - LXBOUND)*(RXBOUND - LXBOUND) * sizeof(int); // length of the square grid for bins * size of int
+	int binarraysize = (((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) * sizeof(int); // length of the square grid for bins * size of int/////
 	cudaMemcpyToSymbol(d_coordarray, h_input_array, coordarraysize);//copy coordinates to Constant Memory
 	cudaMalloc((void**)&d_binarray, binarraysize);
 	dim3 myBlockDim(1, 1, 1);//1d block
@@ -177,14 +191,14 @@ void houghTransform(int* h_input_array, int size) {
 
 int main() {
 	//test case array
-	cout << "begin\n";
 	int *h_test_input = new int[20];
-	int test[20] = { 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10 }; //{x1,y1,x2,y2...}
+	//int test[20] = { 5,1,4,1,3,1,2,1,1,1,-1,1,-2,1,-3,1,-4,1,-5,1 }; //{x1,y1,x2,y2...}
+	int test[20] = { 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10 };
 	//random array initializer
 	int *random = new int[ARRAY_SIZE];
 	srand(time(0));
 	for (int i = 0; i < ARRAY_SIZE; i++) {
-		random[i] = rand() % 10;
+		random[i] = rand() % 10+1; // no points on zero, divide by zero error for this method.
 	}
 	//begin test function
 	houghTransform(test, 20);
