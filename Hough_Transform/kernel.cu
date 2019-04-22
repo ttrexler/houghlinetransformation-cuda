@@ -7,7 +7,7 @@
 #include <iostream>
 
 #define iceil(num, den) (num + den - 1) / den
-#define ARRAY_SIZE 20 //must be an even number; this number/2 = number of points //sets random array and constant mem size
+#define ARRAY_SIZE 100 //must be an even number; this number/2 = number of points //sets random array and constant mem size
 //#define BIN 100 //divides the grid into square bins to vote on. perfect square value
 #define NUM_LINES 1 //top X voted lines. Picks first X Largest from top left to bottom right of grid space.
 
@@ -86,7 +86,7 @@ void highest_index(int *h_binarray) {
 	bool stop = true;
 
 	int temp, temp2;
-
+		
 	// Bubble sort
 	for (int i = 1; (i <= size) && stop; ++i) {
 		stop = false;
@@ -121,7 +121,7 @@ void highest_index(int *h_binarray) {
 
 			totalslope = totalslope - slope;
 		} else {
-			std::cout << "slope = " << slope << " and " std::endl;
+			std::cout << "slope = " << slope << " and " << std::endl;
 
 			totalslope = totalslope + slope;
 		}
@@ -132,7 +132,7 @@ void highest_index(int *h_binarray) {
 
 			totalintercept = totalintercept + intercept;
 		} else {
-			std::cout	<< "and intercept = -" << intercept << std::endl
+			std::cout	<< " and intercept = -" << intercept << std::endl
 						<< "From point: " << index[i] << std::endl;
 
 			totalintercept = totalintercept - intercept;
@@ -140,8 +140,8 @@ void highest_index(int *h_binarray) {
 	}
 
 	std::cout << "=============" << std::endl;
-	std::cout << "The average of these slopes is :" << totalslope / NUM_LINES << std::endl;
-	std::cout << "The average of these intercept is:" << totalintercept / NUM_LINES << std::endl;
+	std::cout << "The average of these slopes is: " << totalslope / NUM_LINES << std::endl;
+	std::cout << "The average of these intercept is: " << totalintercept / NUM_LINES << std::endl;
 	std::cout << std::endl;
 }
 
@@ -208,7 +208,7 @@ void houghTransform(int* h_input_array, int size) {
 
 	cudaMemcpy(h_binarray, d_binarray, binarraysize, cudaMemcpyDeviceToHost);
 
-	printVotes(h_binarray);
+	// printVotes(h_binarray);
 	highest_index(h_binarray);
 }
 
@@ -227,7 +227,7 @@ int main() {
 		random[i] = (rand() % 10) + 1;
 
 	// Begin test function
-	houghTransform(test, 20);
+	houghTransform(random, ARRAY_SIZE);
 
 	return 0;
 }
