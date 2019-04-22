@@ -25,122 +25,124 @@
 
 __constant__ int d_coordarray[ARRAY_SIZE];//Place coordinates in constant memory
 
-using namespace std;
-
 //show grid with votes. Becomes unuseful when bins > 20x20
 void printVotes(int *h_binarray) {
-	//int size = (RXBOUND - LXBOUND)*(RXBOUND - LXBOUND);//array index size
-	int col = (((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) / ((RXBOUND + UYBOUND)/INCREMENT);//number of columns/////////////////
-	for (int i = 0; i < col; i++) {
-		for (int j = 0; j < col*col; j += col) {
-			cout << h_binarray[i + j] << "    ";
-		}
-		cout <<endl;
-	}
+	// Number of columns
+	const int col = (((RXBOUND - LXBOUND) / INCREMENT) * ((RXBOUND - LXBOUND) / INCREMENT)) / ((RXBOUND + UYBOUND) / INCREMENT);
 
+	for (int i = 0; i < col; ++i) {
+		for (int j = 0; j < col * col; j += col)
+			std::cout << h_binarray[i + j] << "\t";
+		std::cout << std::endl;
+	}
 }
-float slopeCalculator(int index) {//convert from array index to representative slope
-	int col = ((((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) / ((RXBOUND + UYBOUND)/INCREMENT));
+
+// Convert from array index to representative slope
+float slopeCalculator(int index) {
+	const int col = ((((RXBOUND - LXBOUND) / INCREMENT) * ((RXBOUND - LXBOUND) / INCREMENT)) / ((RXBOUND + UYBOUND) / INCREMENT));
+	const int center = ((RXBOUND - LXBOUND) / INCREMENT) * ((RXBOUND - LXBOUND) / INCREMENT) / 2;
+
+	int displacement = 0, flag = 0;
 	int change = col;
-	int center = ((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)/2;
-	int displacement = 0;
-	float returnval;
-	int  flag = 0;
+
 	while (flag == 0) {
-		if (index<=center + change && index>=center - change) {
+		if (index <= center + change && index >= center - change) {
 			flag++;
-		}
-		else {
-			change +=col ; displacement++;
+		} else {
+			change += col;
+			displacement++;
 		}
 	}
-	returnval= (displacement*INCREMENT) + (INCREMENT / 2.0);
-	return returnval;
+
+	return (displacement * INCREMENT) + (INCREMENT / 2.0);
 }
 
-float interceptCalculator(int index) {//convert from array index to representative intercept
-	int col = ((((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) / ((RXBOUND + UYBOUND)/INCREMENT));
-	int displacement = 0;
-	int check= index%col;
-	int center1 = col / 2;
-	int center2 = col / 2 - 1;
-	float returnval;
-	int flag = 0;
+// Convert from array index to representative intercept
+float interceptCalculator(int index) {
+	const int col = ((((RXBOUND - LXBOUND) / INCREMENT) * ((RXBOUND - LXBOUND) / INCREMENT)) / ((RXBOUND + UYBOUND) / INCREMENT));
+	const int check = index % col;
+
+	int displacement = 0, flag = 0;
+	int center1 = col / 2, center2 = col / 2 - 1;
+
 	while (flag == 0) {
-		if (check == center1 || check == center2) {
-			flag++;
-		}
-		else displacement++;
-		center1++; center2--;
+		((check == center1 || check == center2) ? flag : displacement)++;
+		center1++;
+		center2--;
 	}
-	returnval = (displacement*INCREMENT) + (INCREMENT / 2.0);
-	return returnval;
+
+	return (displacement * INCREMENT) + (INCREMENT / 2.0);
 }
 
-//find n highest indexes in the array
+// Find n highest indexes in the array
 void highest_index(int *h_binarray) {
-	int size = ((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT);
-	int *index=new int[size];
-	for (int i = 0; i < size; i++) { index[i] = i; }//array representing indices
-	int stop = 1;// 1 starts, then 0, end on 1
-	int temp,temp2;             
-	//bubble sort
-	for (int i = 1; (i <= size) && stop ; i++)
-	{
-		stop = 0;
-		for (int j = 0; j < (size - 1); j++)
-		{
-			if (h_binarray[j + 1] > h_binarray[j])    
-			{
-				temp = h_binarray[j];  
+	const int size = ((RXBOUND - LXBOUND) / INCREMENT) * ((RXBOUND - LXBOUND) / INCREMENT);
+	const int col = (((RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)) / ((RXBOUND + UYBOUND) * INCREMENT));
+
+	int *index = new int[size];
+	for (int i = 0; i < size; ++i)
+		index[i] = i;
+
+	bool stop = true;
+
+	int temp, temp2;
+
+	// Bubble sort
+	for (int i = 1; (i <= size) && stop; ++i) {
+		stop = false;
+
+		for (int j = 0; j < (size - 1); ++j) {
+			if (h_binarray[j + 1] > h_binarray[j]) {
+				temp = h_binarray[j];
 				temp2 = index[j];
+
 				h_binarray[j] = h_binarray[j + 1];
 				index[j] = index[j + 1];
+
 				h_binarray[j + 1] = temp;
-				index[j+1] = temp2;
-				stop = 1;
+				index[j + 1] = temp2;
+
+				stop = true;
 			}
 		}
 	}
 
-	/* Troubleshooting 
-	for (int k = 0; k < 3; k++) {
-		cout << k << " highest index =" << index[k] << "with value =" << h_binarray[k] << endl;
-	}
-	*/
-
 	//use highest values for slope & intercept
-	int col = (((RXBOUND - LXBOUND)*(RXBOUND - LXBOUND)) / ((RXBOUND + UYBOUND)*INCREMENT));//////////////////////////////
-	float totalslope=0.0, totalintercept=0.0;
-	for (int i = 0; i < NUM_LINES; i++) {
-		float slope = slopeCalculator(index[i]);
-		float intercept = interceptCalculator(index[i]);
-		cout << "Line " << i<<":";
+	float totalslope = 0.0, totalintercept = 0.0;
+
+	for (int i = 0; i < NUM_LINES; ++i) {
+		const float slope = slopeCalculator(index[i]);
+		const float intercept = interceptCalculator(index[i]);
+
+		std::cout << "[" << i << "]: ";
+
 		if (index[i] < (size / 2)) {
-			cout << "slope= -" << slope << " and \n";
+			std::cout << "slope= -" << slope << " and " << std::endl;
+
 			totalslope = totalslope - slope;
-		}
-		else {
-			cout << "slope=" << slope << " and \n";
+		} else {
+			cout << "slope = " << slope << " and " std::endl;
+
 			totalslope = totalslope + slope;
 		}
+
 		if (index[i] % col < (col / 2)) {
-			cout << " and intercept =" << intercept << endl;
-			cout << "From point:" << index[i] << endl;
+			std::cout	<< " and intercept = " << intercept << std::endl
+						<< "From point: " << index[i] << std::endl;
+
 			totalintercept = totalintercept + intercept;
-		}
-		else {
-			cout << "and intercept = -" << intercept << endl;
-			cout << "From point: " << index[i] << endl;
+		} else {
+			std::cout	<< "and intercept = -" << intercept << std::endl
+						<< "From point: " << index[i] << std::endl;
+
 			totalintercept = totalintercept - intercept;
 		}
 	}
-	cout << "=============\n";
-	cout << "The average of these slopes is :" << totalslope / NUM_LINES;
-	cout << "The average of these intercept is:" << totalintercept / NUM_LINES;
-	cout << endl;
-	
 
+	std::cout << "=============" << std::endl;
+	std::cout << "The average of these slopes is :" << totalslope / NUM_LINES;
+	std::cout << "The average of these intercept is:" << totalintercept / NUM_LINES;
+	std::cout << std::endl;
 }
 
 //kernel functions
@@ -153,21 +155,31 @@ __global__ void kernelHough(int size, int* d_binarray) {
 	check each bin for count and sum them to a global array in sync
 	NUM of coordinates will check all bins for their own equation and increment appropriately
 	*/
-	int thread = 2 * (blockDim.x * blockIdx.x + threadIdx.x);//number from 0 through arraysize/2 
-	float slope = -1 * (1 / d_coordarray[thread]); // slope is discretized space = -1/x
-	float intercept = d_coordarray[thread + 1] / d_coordarray[thread]; // intercept in discretized space = y/x
+
+	// Number from 0 through arraysize / 2
+	const int thread = 2 * (blockDim.x * blockIdx.x + threadIdx.x);
+
+	// Slope is discretized space = -1 / x
+	const float slope = -1 * (1 / d_coordarray[thread]);
+
+	// Intercept in discretized space = y / x
+	const float intercept = d_coordarray[thread + 1] / d_coordarray[thread];
+
 	int counter = 0;
 	for (float x = LXBOUND; x < RXBOUND; x += INCREMENT) {
 		for (float y = UYBOUND; y > LYBOUND; y -= INCREMENT) {
-			float xMin = x;
-			float xMax = x + INCREMENT;
-			float yMin = y - INCREMENT;
-			float yMax = y;
-			float lower_range = slope * xMin + intercept;
-			float upper_range = slope * xMax + intercept;
-			if ((lower_range<=yMax && lower_range>=yMin) || (upper_range<=yMax && upper_range>=yMin)) {
+			const float xMin = x;
+			const float xMax = x + INCREMENT;
+			
+			const float yMin = y - INCREMENT;
+			const float yMax = y;
+			
+			const float lower_range = slope * xMin + intercept;
+			const float upper_range = slope * xMax + intercept;
+
+			if ((lower_range <= yMax && lower_range >= yMin) || (upper_range <= yMax && upper_range >= yMin))
 				atomicAdd(&d_binarray[counter], 1);
-			}
+
 			counter++;
 		}
 	}
@@ -176,31 +188,46 @@ __global__ void kernelHough(int size, int* d_binarray) {
 //prep function
 void houghTransform(int* h_input_array, int size) {
 	int *d_binarray;
-	int *h_binarray = new int[((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)];
-	int coordarraysize = size * sizeof(int);
-	int binarraysize = (((RXBOUND - LXBOUND)/INCREMENT)*((RXBOUND - LXBOUND)/INCREMENT)) * sizeof(int); // length of the square grid for bins * size of int/////
-	cudaMemcpyToSymbol(d_coordarray, h_input_array, coordarraysize);//copy coordinates to Constant Memory
+	int *h_binarray = new int[((RXBOUND - LXBOUND) / INCREMENT) * ((RXBOUND - LXBOUND) / INCREMENT)];
+
+	// Length of the square grid for bins * size of int
+	const int binarraysize = (((RXBOUND - LXBOUND) / INCREMENT) * ((RXBOUND - LXBOUND) / INCREMENT)) * sizeof(int);
+	const int coordarraysize = size * sizeof(int);
+
+	// Copy coordinates to Constant Memory
+	cudaMemcpyToSymbol(d_coordarray, h_input_array, coordarraysize);
 	cudaMalloc((void**)&d_binarray, binarraysize);
-	dim3 myBlockDim(1, 1, 1);//1d block
-	dim3 myGridDim((size/2), 1, 1);//((size / 2), 1, 1);//1d grid
-	kernelHough << <myGridDim, myBlockDim >> > (size, d_binarray);
+
+	// 1-D Block
+	dim3 myBlockDim(1, 1, 1);
+
+	// ((size / 2), 1, 1); 1d grid
+	dim3 myGridDim((size/2), 1, 1);
+
+	kernelHough <<<myGridDim, myBlockDim>>> (size, d_binarray);
+
 	cudaMemcpy(h_binarray, d_binarray, binarraysize, cudaMemcpyDeviceToHost);
+
 	printVotes(h_binarray);
 	highest_index(h_binarray);
 }
 
 int main() {
-	//test case array
-	int *h_test_input = new int[20];
-	//int test[20] = { 5,1,4,1,3,1,2,1,1,1,-1,1,-2,1,-3,1,-4,1,-5,1 }; //{x1,y1,x2,y2...}
-	int test[20] = { 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10 };
-	//random array initializer
-	int *random = new int[ARRAY_SIZE];
+	// Seed RNG
 	srand(time(0));
-	for (int i = 0; i < ARRAY_SIZE; i++) {
-		random[i] = rand() % 10+1; // no points on zero, divide by zero error for this method.
-	}
-	//begin test function
+
+	// Test case array
+	int *h_test_input = new int[20];
+
+	int test[20] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10};
+
+	// Random array initializer
+	int *random = new int[ARRAY_SIZE];
+	for (int i = 0; i < ARRAY_SIZE; ++i)
+		random[i] = (rand() % 10) + 1;
+
+	// Begin test function
 	houghTransform(test, 20);
+
 	return 0;
 }
