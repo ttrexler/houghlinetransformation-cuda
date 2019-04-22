@@ -121,7 +121,7 @@ void highest_index(int *h_binarray) {
 
 			totalslope = totalslope - slope;
 		} else {
-			cout << "slope = " << slope << " and " std::endl;
+			std::cout << "slope = " << slope << " and " std::endl;
 
 			totalslope = totalslope + slope;
 		}
@@ -140,8 +140,8 @@ void highest_index(int *h_binarray) {
 	}
 
 	std::cout << "=============" << std::endl;
-	std::cout << "The average of these slopes is :" << totalslope / NUM_LINES;
-	std::cout << "The average of these intercept is:" << totalintercept / NUM_LINES;
+	std::cout << "The average of these slopes is :" << totalslope / NUM_LINES << std::endl;
+	std::cout << "The average of these intercept is:" << totalintercept / NUM_LINES << std::endl;
 	std::cout << std::endl;
 }
 
